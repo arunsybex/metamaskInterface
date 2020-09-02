@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- CSS only -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+
+<!-- JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+
+  <script>
+
+    async function refreshData() {
+
+      await getBlock()
+      const accounts = await ethereum.request({ method: 'eth_accounts' });
+      let eth_chainID = ethereum.chainId
+      let unblocked = await ethereum._metamask.isUnlocked()
+      let eth_count = await ethereum.request({ method: 'eth_getTransactionCount',params: [accounts[0],'latest'] })
+      document.getElementById("eth_address").innerText = accounts
+      document.getElementById("eth_chainID").innerText = eth_chainID +"   -   "+ web3.toDecimal(eth_chainID)
+      document.getElementById("eth_enabled").innerText = unblocked ? "Unlocked" : "Locked"
+      if (accounts.length > 0) {
+
+        web3.eth.getBalance(ethereum.selectedAddress,function(err,data){
+          if (!err){
+            document.getElementById("eth_balance").innerText = (data.toNumber()/1000000000000000000)
+            document.getElementById("eth_count").innerText = web3.toDecimal(eth_count)
+          } 
+        })
+        
+      }
+    }
+
+    async function getBlock(e) {
+      if (e != undefined) {
+        let eth_block = await ethereum.request({ method: 'eth_getBlockByNumber',params: [web3.toHex(e.value),true] })
+        document.getElementById("eth_block").innerText = JSON.stringify(eth_block, undefined, 2);
+      } else {
+            document.getElementById("eth_block").innerText = ""
+          }
+    }
+
+    async function transfer() {
+      let eth_count = document.getElementById("eth_send_count").value
+      let eth_send_address = document.getElementById("eth_send_address").value
+      let params = [{
+                    "from": ethereum.selectedAddress,
+                    "to": eth_send_address,
+                    "gas": "0x76c0", // 30400
+                    "gasPrice": "0x9184e72a000", // 10000000000000
+                    "value": web3.toHex(web3.toWei(eth_count,'ether')),
+                    "data": "0x"
+                    }]
+                    // eth_sendTransaction
+      let txHash = await ethereum.request({ 
+          method: 'eth_sendTransaction',
+          params: params
+      })
+      console.log(txHash)
+      
+    }
+
+    ethereum.on('accountsChanged', async function (accounts) {
+      await refreshData()
+      await getBlock()
+    });
+
+    $(document).ready(async function(){
+      let eth = await ethereum.enable()
+      await refreshData()
+      await getBlock()
+      
+    });
+  </script>
+</head>
+<body>
+  <div class="container-lg">
+    <div class="row">
+      <div class="col-sm-12">
+        <div class="table-responsive">
+          <table class="table">
+            <thead class="thead-dark">
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col"><button onclick="refreshData();">Refresh</button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">MetaMask Enabled</th>
+                <td><pre id="eth_enabled"></pre></td>
+              </tr>
+              <tr>
+                <th scope="row">Chain ID</th>
+                <td><pre id="eth_chainID"></pre></td>
+              </tr>
+              <tr>
+                <th scope="row">Ethereum Address</th>
+                <td><pre id="eth_address"></pre></td>
+              </tr>
+              <tr>
+                <th scope="row">Ethereum Balance</th>
+                <td><pre id="eth_balance"></pre></td>
+              </tr>
+              <tr>
+                <th scope="row">Account Txs count ( Nonce )</th>
+                <td><pre id="eth_count"></pre></td>
+              </tr>
+              <tr>
+                <th scope="row">Get Block <input type="number" onkeyup="getBlock(this);"/></th>
+                <td><pre id="eth_block"></pre></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="jumbotron">
+      <form>
+        <h1>Transfer Ether </h1>
+        <div class="row">
+          <div class="col">
+            <input type="number" class="form-control" id="eth_send_count" placeholder="Enter amount" name="eth_send_count">
+          </div>
+          <div class="col">
+            <input type="text" class="form-control" id="eth_send_address" placeholder="Enter Address" name="address">
+          </div>
+          <div class="col">
+            <button onclick="transfer();">Transfer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
